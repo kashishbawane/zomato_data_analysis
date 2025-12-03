@@ -10,7 +10,8 @@ st.set_page_config(page_title="Zomato Data Analysis", layout="wide")
 st.title("🍽️ Zomato Restaurant Data Analysis")
 
 # Load dataset
-df = pd.read_csv('./Datasets/zomato.csv')
+df = pd.read_csv('./Datasets/Zomato_Live.csv')
+
 
 # Cleaning
 df = df.drop(['url','address','online_order','book_table','phone','rest_type',

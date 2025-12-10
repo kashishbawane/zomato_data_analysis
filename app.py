@@ -3,14 +3,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
 import numpy as np
-import plotly.express as px
 
 # ------------------- PAGE CONFIG -------------------
-st.set_page_config(page_title="Zomato Animated Dashboard",
+st.set_page_config(page_title="Zomato Intelligent Dashboard",
                    layout="wide",
                    page_icon="🍽️")
 
-# ------------------- CUSTOM CSS -------------------
+# ------------------- CUSTOM UI CSS -------------------
 st.markdown("""
 <style>
 .big-title {
@@ -30,7 +29,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ------------------- TITLE -------------------
-st.markdown("<h1 class='big-title'>🍽️ Zomato AI & Animated Analytics Dashboard</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='big-title'>🍽️ Zomato AI-Powered Analytics Dashboard</h1>", unsafe_allow_html=True)
+st.write("Explore restaurants with **AI insights, advanced filters, beautiful charts & maps**")
 
 # ------------------- FILE UPLOADER -------------------
 uploaded_file = st.file_uploader("📤 Upload Zomato CSV File", type=["csv"])
@@ -38,24 +38,29 @@ uploaded_file = st.file_uploader("📤 Upload Zomato CSV File", type=["csv"])
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
 
-    # ---------- SIDEBAR FILTERS ----------
+    # ------------- SIDEBAR FILTERS ----------------
     st.sidebar.header("🔍 Filters Panel")
 
+    # Rating range filter
     min_rating, max_rating = st.sidebar.slider(
-        "Filter by Rating",
+        "Filter by Rating (0 to 5)",
         0.0, 5.0, (0.0, 5.0)
     )
 
+    # Cost filter
     min_cost, max_cost = st.sidebar.slider(
         "Filter by Approx Cost",
         int(df.approx_cost.min()), int(df.approx_cost.max()),
         (int(df.approx_cost.min()), int(df.approx_cost.max()))
     )
 
+    # Location dropdown
     location = st.sidebar.selectbox("Select Location", sorted(df.location.unique()))
+
+    # Restaurant search bar
     search = st.sidebar.text_input("Search Restaurant Name")
 
-    # ---------- APPLY FILTERS ----------
+    # ---------------- FILTERING DATA -----------------
     lo = df[
         (df.location == location) &
         (df.rate.between(min_rating, max_rating)) &
@@ -65,7 +70,7 @@ if uploaded_file is not None:
     if search:
         lo = lo[lo.name.str.contains(search, case=False)]
 
-    # ---------- Metrics ----------
+    # -------------------- METRICS --------------------
     c1, c2, c3 = st.columns(3)
 
     with c1:
@@ -77,76 +82,64 @@ if uploaded_file is not None:
         st.markdown(f"<h2>{len(lo)}</h2></div>", unsafe_allow_html=True)
 
     with c3:
-        st.markdown("<div class='card'><h3>⭐ Best Rating</h3>", unsafe_allow_html=True)
+        st.markdown("<div class='card'><h3>⭐ Highest Rating</h3>", unsafe_allow_html=True)
         st.markdown(f"<h2>{round(lo.rate.max(),2)}</h2></div>", unsafe_allow_html=True)
 
-    # AI Suggestion
+    # ------------------- AI RECOMMENDATION -------------------
     st.subheader("🤖 AI Recommendation")
+
     if len(lo) > 0:
         best = lo.sort_values("rate", ascending=False).iloc[0]
         st.success(f"💡 Best restaurant in **{location}** is **{best['name']}** "
-                   f"with ⭐ **{best['rate']}**, Cost: ₹{best['approx_cost']}")
+                   f"with rating ⭐ **{best['rate']}** and cost **₹{best['approx_cost']}**")
     else:
-        st.warning("No restaurants found. Try different filters!")
+        st.warning("No restaurants found for selected filters!")
 
-    # ---------- Top 10 Restaurants ----------
+    # ------------------- TOP 10 RESTAURANTS TABLE -------------------
     gr = lo.groupby('name')[['rate', 'approx_cost']].mean().nlargest(10, 'rate').reset_index()
+
     st.subheader(f"🏆 Top 10 Restaurants in {location}")
     st.dataframe(gr, use_container_width=True)
 
-    # --------------------------------------------------
-    # 🔥🔥🔥 ANIMATED CHART 1 — COST BAR CHART (Plotly) 🔥🔥🔥
-    # --------------------------------------------------
-    st.subheader("📊 Animated — Top Restaurants Approx Cost")
+    # ------------------- CHART 1: COST BAR CHART -------------------
+    st.subheader("📊 Top Restaurants - Approx Cost")
 
-    fig_animated_cost = px.bar(
-        gr,
-        x="name",
-        y="approx_cost",
-        color="approx_cost",
-        animation_frame="rate",
-        title="Animated Cost Chart (based on Rating)",
-        labels={"name": "Restaurant Name", "approx_cost": "Approx Cost"},
-    )
-    fig_animated_cost.update_layout(width=1000, height=500)
-    st.plotly_chart(fig_animated_cost)
+    fig = plt.figure(figsize=(16, 6))
+    sb.barplot(x=gr.name, y=gr.approx_cost, palette="summer")
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
 
-    # --------------------------------------------------
-    # 🔥🔥🔥 ANIMATED CHART 2 — COST vs RATING (Bubble) 🔥🔥🔥
-    # --------------------------------------------------
-    st.subheader("🟢 Animated Bubble Chart — Cost vs Rating")
+    # ------------------- CHART 2: RATING BAR CHART -------------------
+    st.subheader("⭐ Top Restaurants - Ratings")
 
-    fig_bubble = px.scatter(
-        lo,
-        x="approx_cost",
-        y="rate",
-        size="approx_cost",
-        color="rate",
-        hover_name="name",
-        animation_frame="rate",
-        title="Cost vs Rating (Animated)",
-    )
-    fig_bubble.update_layout(width=1000, height=500)
-    st.plotly_chart(fig_bubble)
+    fig2 = plt.figure(figsize=(16, 6))
+    sb.barplot(x=gr.name, y=gr.rate, palette="coolwarm")
+    plt.xticks(rotation=45)
+    st.pyplot(fig2)
 
-    # --------------------------------------------------
-    # 🔥🔥🔥 HEATMAP (Static) 🔥🔥🔥
-    # --------------------------------------------------
+    # ------------------- CHART 3: COST vs RATING SCATTER -------------------
+    st.subheader("📌 Cost vs Rating (Trend Analysis)")
+
+    fig3 = plt.figure(figsize=(10, 5))
+    sb.scatterplot(data=lo, x="approx_cost", y="rate")
+    plt.xlabel("Approx Cost")
+    plt.ylabel("Rating")
+    st.pyplot(fig3)
+
+    # ------------------- CHART 4: HEATMAP -------------------
     st.subheader("🔥 Correlation Heatmap")
 
     fig4 = plt.figure(figsize=(6, 4))
     sb.heatmap(lo[['approx_cost', 'rate']].corr(), annot=True, cmap="magma")
     st.pyplot(fig4)
 
-    # --------------------------------------------------
-    # 🗺️ MAP VISUALIZATION
-    # --------------------------------------------------
-    st.subheader("🗺️ Restaurants Map")
+    # ------------------- MAP VISUALIZATION -------------------
+    st.subheader("🗺️ Restaurants Map (If Latitude & Longitude available)")
 
     if "lat" in df.columns and "long" in df.columns:
         st.map(lo[['lat', 'long']])
     else:
-        st.info("Map not available — lat/long missing in dataset.")
+        st.info("Map could not be displayed — No latitude/longitude columns found in your dataset.")
 
 else:
     st.info("👆 Upload a Zomato CSV file to start the dashboard.")
